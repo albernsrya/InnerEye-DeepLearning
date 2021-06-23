@@ -248,8 +248,12 @@ def test_optim_params2(test_output_dirs: OutputFolderForTests) -> None:
 
 
 def test_extra_directory_available(test_output_dirs: OutputFolderForTests) -> None:
-    def _create_container(extra_local_dataset_paths: List[Path] = [],
-                          extra_azure_dataset_ids: List[str] = []) -> LightningContainer:
+    def _create_container(extra_local_dataset_paths: List[Path] = None,
+                          extra_azure_dataset_ids: List[str] = None) -> LightningContainer:
+        if extra_local_dataset_paths is None:
+            extra_local_dataset_paths = []
+        if extra_azure_dataset_ids is None:
+            extra_azure_dataset_ids = []
         container = DummyContainerWithModel()
         container.local_dataset = test_output_dirs.root_dir
         container.extra_local_dataset_paths = extra_local_dataset_paths
