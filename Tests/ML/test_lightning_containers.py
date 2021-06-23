@@ -19,8 +19,8 @@ from InnerEye.ML.lightning_container import LightningContainer
 from InnerEye.ML.model_config_base import ModelConfigBase
 from InnerEye.ML.run_ml import MLRunner
 from Tests.ML.configs.DummyModel import DummyModel
-from Tests.ML.configs.lightning_test_containers import DummyContainerWithHooks, DummyContainerWithModel, \
-    DummyContainerWithPlainLightning
+from Tests.ML.configs.lightning_test_containers import (DummyContainerWithHooks, DummyContainerWithModel,
+                                                        DummyContainerWithPlainLightning)
 from Tests.ML.util import default_runner
 
 
@@ -31,14 +31,20 @@ def test_run_container_in_situ(test_output_dirs: OutputFolderForTests) -> None:
     runner = default_runner()
     local_dataset = test_output_dirs.root_dir / "dataset"
     local_dataset.mkdir()
-    args = ["", "--model=DummyContainerWithModel", "--model_configs_namespace=Tests.ML.configs",
-            f"--output_to={test_output_dirs.root_dir}", f"--local_dataset={local_dataset}"]
+    args = [
+        "",
+        "--model=DummyContainerWithModel",
+        "--model_configs_namespace=Tests.ML.configs",
+        f"--output_to={test_output_dirs.root_dir}",
+        f"--local_dataset={local_dataset}",
+    ]
     with mock.patch("sys.argv", args):
         loaded_config, actual_run = runner.run()
     assert actual_run is None
     assert isinstance(runner.lightning_container, DummyContainerWithModel)
     # Test if the outputs folder is relative to the folder that we specified via the commandline
-    runner.lightning_container.outputs_folder.relative_to(test_output_dirs.root_dir)
+    runner.lightning_container.outputs_folder.relative_to(
+        test_output_dirs.root_dir)
     results = runner.lightning_container.outputs_folder
     # Test that the setup method has been called
     assert runner.lightning_container.local_dataset is not None
@@ -52,15 +58,21 @@ def test_run_container_in_situ(test_output_dirs: OutputFolderForTests) -> None:
         step_results = results / f"inference_step_{mode.value}.txt"
         assert step_results.is_file()
         # We should have one line per data item, and there are around 6 of them
-        result_lines = [line for line in step_results.read_text().splitlines() if line.strip()]
+        result_lines = [
+            line for line in step_results.read_text().splitlines()
+            if line.strip()
+        ]
         assert len(result_lines) >= 5
     metrics_per_split = pd.read_csv(results / "metrics_per_split.csv")
     # Training should have reduced the MSE to pretty much zero.
-    expected = pd.read_csv(StringIO("""Split,MSE
+    expected = pd.read_csv(
+        StringIO("""Split,MSE
 Test,1e-7
 Val,1e-7
 Train,1e-7"""))
-    pd.testing.assert_frame_equal(metrics_per_split, expected, check_less_precise=True)
+    pd.testing.assert_frame_equal(metrics_per_split,
+                                  expected,
+                                  check_less_precise=True)
     # Test if we have an args file that lists all parameters
     args_file = (results / ARGS_TXT).read_text()
     assert "Container:" in args_file
@@ -69,21 +81,29 @@ Train,1e-7"""))
     assert (results / "create_report.txt").is_file()
 
 
-def test_run_container_with_plain_lightning_in_situ(test_output_dirs: OutputFolderForTests) -> None:
+def test_run_container_with_plain_lightning_in_situ(
+        test_output_dirs: OutputFolderForTests, ) -> None:
     """
     Test if we can train a plain Lightning model, without any additional methods defined, end-to-end.
     """
     runner = default_runner()
     local_dataset = test_output_dirs.root_dir / "dataset"
     local_dataset.mkdir()
-    args = ["", "--model=DummyContainerWithPlainLightning", "--model_configs_namespace=Tests.ML.configs",
-            f"--output_to={test_output_dirs.root_dir}", f"--local_dataset={local_dataset}"]
+    args = [
+        "",
+        "--model=DummyContainerWithPlainLightning",
+        "--model_configs_namespace=Tests.ML.configs",
+        f"--output_to={test_output_dirs.root_dir}",
+        f"--local_dataset={local_dataset}",
+    ]
     with mock.patch("sys.argv", args):
         loaded_config, actual_run = runner.run()
     assert actual_run is None
-    assert isinstance(runner.lightning_container, DummyContainerWithPlainLightning)
+    assert isinstance(runner.lightning_container,
+                      DummyContainerWithPlainLightning)
     # Test if the outputs folder is relative to the folder that we specified via the commandline
-    runner.lightning_container.outputs_folder.relative_to(test_output_dirs.root_dir)
+    runner.lightning_container.outputs_folder.relative_to(
+        test_output_dirs.root_dir)
     results = runner.lightning_container.outputs_folder
     # Test if all the files that are written during inference exist.
     assert not (results / "on_inference_start.txt").is_file()
@@ -96,7 +116,10 @@ def test_innereye_container_init() -> None:
     """
     # The constructor should copy all fields that belong to either WorkflowParams or DatasetParams from the
     # config object to the container.
-    for (attrib, type_) in [("weights_url", WorkflowParams), ("azure_dataset_id", DatasetParams)]:
+    for (attrib, type_) in [
+        ("weights_url", WorkflowParams),
+        ("azure_dataset_id", DatasetParams),
+    ]:
         config = ModelConfigBase(should_validate=False)
         assert hasattr(type_, attrib)
         assert hasattr(config, attrib)
@@ -124,6 +147,7 @@ def test_create_fastmri_container() -> None:
     """
     from InnerEye.ML.configs.other.fastmri_varnet import VarNetWithImageLogging
     from Tests.ML.configs.fastmri_random import FastMriOnRandomData
+
     FastMriOnRandomData()
     VarNetWithImageLogging()
 
@@ -137,13 +161,17 @@ def test_run_fastmri_container(test_output_dirs: OutputFolderForTests) -> None:
     runner = default_runner()
     dataset_dir = test_output_dirs.root_dir / "dataset"
     dataset_dir.mkdir(parents=True)
-    args = ["", "--model=FastMriOnRandomData",
-            f"--output_to={test_output_dirs.root_dir}",
-            "--model_configs_namespace=Tests.ML.configs"]
+    args = [
+        "",
+        "--model=FastMriOnRandomData",
+        f"--output_to={test_output_dirs.root_dir}",
+        "--model_configs_namespace=Tests.ML.configs",
+    ]
     with mock.patch("sys.argv", args):
         loaded_config, actual_run = runner.run()
     assert actual_run is None
     from Tests.ML.configs.fastmri_random import FastMriOnRandomData
+
     assert isinstance(runner.lightning_container, FastMriOnRandomData)
 
 
@@ -170,7 +198,6 @@ def test_model_name_for_innereye_container() -> None:
 
 
 class DummyContainerWithFields(LightningContainer):
-
     def __init__(self) -> None:
         super().__init__()
         self.perform_training_set_inference = True
@@ -200,7 +227,8 @@ def test_container_to_str() -> None:
     assert " initialized          " not in s
 
 
-def test_file_system_with_subfolders(test_output_dirs: OutputFolderForTests) -> None:
+def test_file_system_with_subfolders(
+        test_output_dirs: OutputFolderForTests) -> None:
     """
     Test if a subfolder can be created within the output folder structure, for use with cross validation.
     """
@@ -247,9 +275,16 @@ def test_optim_params2(test_output_dirs: OutputFolderForTests) -> None:
     assert optim[0].param_groups[0]["lr"] == expected_lr
 
 
-def test_extra_directory_available(test_output_dirs: OutputFolderForTests) -> None:
-    def _create_container(extra_local_dataset_paths: List[Path] = [],
-                          extra_azure_dataset_ids: List[str] = []) -> LightningContainer:
+def test_extra_directory_available(
+        test_output_dirs: OutputFolderForTests) -> None:
+    def _create_container(
+        extra_local_dataset_paths: List[Path] = None,
+        extra_azure_dataset_ids: List[str] = None,
+    ) -> LightningContainer:
+        if extra_local_dataset_paths is None:
+            extra_local_dataset_paths = []
+        if extra_azure_dataset_ids is None:
+            extra_azure_dataset_ids = []
         container = DummyContainerWithModel()
         container.local_dataset = test_output_dirs.root_dir
         container.extra_local_dataset_paths = extra_local_dataset_paths
@@ -258,9 +293,14 @@ def test_extra_directory_available(test_output_dirs: OutputFolderForTests) -> No
         runner.setup()
         return runner.container
 
-    extra_local_dataset_paths = [test_output_dirs.root_dir, test_output_dirs.root_dir]
+    extra_local_dataset_paths = [
+        test_output_dirs.root_dir, test_output_dirs.root_dir
+    ]
     container = _create_container(extra_local_dataset_paths)
-    assert container.extra_local_dataset_paths == [test_output_dirs.root_dir, test_output_dirs.root_dir]
+    assert container.extra_local_dataset_paths == [
+        test_output_dirs.root_dir,
+        test_output_dirs.root_dir,
+    ]
 
     # Check default behavior (no extra datasets provided)
     container = _create_container()
@@ -278,5 +318,8 @@ def test_container_hooks(test_output_dirs: OutputFolderForTests) -> None:
     runner.run()
     # The hooks in DummyContainerWithHooks itself check that the hooks are called in the right order. Here,
     # only check that they have all been called.
-    for file in ["global_rank_zero.txt", "local_rank_zero.txt", "all_ranks.txt"]:
-        assert (runner.container.outputs_folder / file).is_file(), f"Missing file: {file}"
+    for file in [
+            "global_rank_zero.txt", "local_rank_zero.txt", "all_ranks.txt"
+    ]:
+        assert (runner.container.outputs_folder
+                / file).is_file(), f"Missing file: {file}"

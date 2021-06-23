@@ -53,7 +53,8 @@ class BYOLInnerEye(pl.LightningModule):
         self.save_hyperparameters()
 
         self.min_learning_rate = 1e-4
-        self.online_network = SiameseArm(encoder_name, use_7x7_first_conv_in_resnet)
+        self.online_network = SiameseArm(encoder_name,
+                                         use_7x7_first_conv_in_resnet)
         self.target_network = deepcopy(self.online_network)
         self.weight_callback = ByolMovingAverageWeightUpdate()
 
@@ -82,7 +83,8 @@ class BYOLInnerEye(pl.LightningModule):
         :param batch_idx: index of the batch
         :return: BYOL loss
         """
-        batch = batch[SSLDataModuleType.ENCODER] if isinstance(batch, dict) else batch
+        batch = batch[SSLDataModuleType.ENCODER] if isinstance(batch,
+                                                               dict) else batch
         (img_1, img_2), _ = batch
 
         # Image 1 to image 2 loss
@@ -96,14 +98,19 @@ class BYOLInnerEye(pl.LightningModule):
 
         return loss
 
-    def training_step(self, batch: BatchType, batch_idx: int, **kwargs: Any) -> T:  # type: ignore
+    def training_step(self, batch: BatchType, batch_idx: int,
+                      **kwargs: Any) -> T:  # type: ignore
         loss = self.shared_step(batch, batch_idx)
-        self.log_dict({'byol/train/loss': loss, 'byol/tau': self.weight_callback.current_tau})
+        self.log_dict({
+            "byol/train/loss": loss,
+            "byol/tau": self.weight_callback.current_tau
+        })
         return loss
 
-    def validation_step(self, batch: BatchType, batch_idx: int, **kwargs: Any) -> T:  # type: ignore
+    def validation_step(self, batch: BatchType, batch_idx: int,
+                        **kwargs: Any) -> T:  # type: ignore
         loss = self.shared_step(batch, batch_idx)
-        self.log_dict({'byol/val/loss': loss})
+        self.log_dict({"byol/val/loss": loss})
         return loss
 
     def setup(self, *args: Any, **kwargs: Any) -> None:
@@ -118,9 +125,12 @@ class BYOLInnerEye(pl.LightningModule):
         """
         # TRICK 1 (Use lars + filter weights)
         # exclude certain parameters
-        parameters = self.exclude_from_wt_decay(self.online_network.named_parameters(),
-                                                weight_decay=self.hparams.weight_decay)  # type: ignore
-        optimizer = LARSWrapper(Adam(parameters, lr=self.hparams.learning_rate))  # type: ignore
+        parameters = self.exclude_from_wt_decay(
+            self.online_network.named_parameters(),
+            weight_decay=self.hparams.weight_decay,
+        )  # type: ignore
+        optimizer = LARSWrapper(Adam(
+            parameters, lr=self.hparams.learning_rate))  # type: ignore
 
         # Trick 2 (after each step)
         self.hparams.warmup_epochs = self.hparams.warmup_epochs * self.train_iters_per_epoch  # type: ignore
@@ -134,18 +144,26 @@ class BYOLInnerEye(pl.LightningModule):
             eta_min=self.min_learning_rate,
         )
 
-        scheduler = {'scheduler': linear_warmup_cosine_decay, 'interval': 'step', 'frequency': 1}
+        scheduler = {
+            "scheduler": linear_warmup_cosine_decay,
+            "interval": "step",
+            "frequency": 1,
+        }
 
         return [optimizer], [scheduler]
 
-    def exclude_from_wt_decay(self,
-                              named_params: Iterator[Tuple[str, T]],
-                              weight_decay: float,
-                              skip_list: List[str] = ['bias', 'bn']) -> List[Dict[str, Any]]:
+    def exclude_from_wt_decay(
+        self,
+        named_params: Iterator[Tuple[str, T]],
+        weight_decay: float,
+        skip_list: List[str] = None,
+    ) -> List[Dict[str, Any]]:
         """
         Convolution-Linear bias-terms and batch-norm parameters are excluded from l2-norm weight decay regularisation.
         https://arxiv.org/pdf/2006.07733.pdf Section 3.3 Optimisation and Section F.5.
         """
+        if skip_list is None:
+            skip_list = ["bias", "bn"]
         params = []
         excluded_params = []
 
@@ -158,7 +176,12 @@ class BYOLInnerEye(pl.LightningModule):
                 params.append(param)
 
         return [
-            {'params': params, 'weight_decay': weight_decay},
-            {'params': excluded_params, 'weight_decay': 0.}
+            {
+                "params": params,
+                "weight_decay": weight_decay
+            },
+            {
+                "params": excluded_params,
+                "weight_decay": 0.0
+            },
         ]
-
